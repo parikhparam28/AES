@@ -3,7 +3,8 @@ from Crypto.Cipher import AES
 import os 
 import os.path
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile
+from os import walk
 import time
 
 class Encryptor : 
@@ -20,12 +21,15 @@ class Encryptor :
         return iv + cipher.encrypt(message)
     
     def encrypt_file(self , file_name):
-        with open(file_name,'rb') as fo:
-            plaintext = fo.read()
-        enc = self.encrypt(plaintext , self.key)
-        with open(file_name + ".enc" , 'wb') as fo:
-            fo.write(enc)
-        os.remove(file_name)
+        if(file_name[-4:] != ".enc"):
+            with open(file_name,'rb') as fo:
+                plaintext = fo.read()
+            enc = self.encrypt(plaintext , self.key)
+            with open(file_name + ".enc" , 'wb') as fo:
+                fo.write(enc)
+            os.remove(file_name)
+        else:
+            print("  File already encrypted    ")
 
     def decrpt(self , cipherText , key):
         iv = cipherText[:AES.block_size]
@@ -34,77 +38,61 @@ class Encryptor :
         return plaintext.rstrip(b"\0")
     
     def decrypt_file(self , file_name):
-        with open(file_name , 'rb') as fo:
-            cipherText = fo.read()
-        dec = self.decrpt(cipherText , self.key)
-        with open(file_name[:-4] , 'wb') as fo:
-            fo.write(dec)
-        os.remove(file_name)
+        if(file_name[-4:] == ".enc"):
+            with open(file_name , 'rb') as fo:
+                cipherText = fo.read()
+            dec = self.decrpt(cipherText , self.key)
+            with open(file_name[:-4] , 'wb') as fo:
+                fo.write(dec)
+            os.remove(file_name)
+        else:
+            print("  File already decrypted    ")
     
-    def getAllFiles(self):
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        dirs = []
-        for dirName, subdirList, fileList in os.walk(dir_path):
-            for fname in fileList:
-                if (fname != 'script.py' and fname != 'data.txt.enc'):
-                    dirs.append(dirName + "\\" + fname)
-        return dirs
+    def getAllFiles(self , path):
+        filepaths = []
+        for (dirpath , dirname , filename) in walk(path):
+            for f in filename:
+                filepaths.append(dirpath + "\\" + f)
+        return filepaths
 
-    def encrypt_all_files(self):
-        dirs = self.getAllFiles()
-        for file_name in dirs:
-            self.encrypt_file(file_name)
+    def encrypt_all_files(self , path):
+        dirs = self.getAllFiles(path)
+        for file_path in dirs:
+            self.encrypt_file(file_path)
     
-    def decrypt_all_files(self):
-        dirs = self.getAllFiles()
-        for file_name in dirs:
-            self.decrypt_file(file_name)
+    def decrypt_all_files(self , path):
+        dirs = self.getAllFiles(path)
+        for file_path in dirs:
+            self.decrypt_file(file_path)
 
 key = b'[EX\xc8\xd5\xbfI{\xa2$\x05(\xd5\x18\xbf\xc0\x85)\x10nc\x94\x02)j\xdf\xcb\xc4\x94\x9d(\x9e'
 enc = Encryptor(key)
 clear = lambda: os.system('cls')
 
-if os.path.isfile('data.txt.enc'):
-    while True:
-        password = str(input("Enter password: "))
-        enc.decrypt_file("data.txt.enc")
-        p = ''
-        with open("data.txt", "r") as f:
-            p = f.readlines()
-        if p[0] == password:
-            enc.encrypt_file("data.txt")
-            break
 
-    while True:
+while(True) : 
+    s = str(input("\nEnter file or folder path : "))
+    while(os.path.isfile(s)==False and os.path.isdir(s)==False):
+        print("\nInvalid file or folder path")
         clear()
-        choice = int(input(
-            "1. Press '1' to encrypt file.\n2. Press '2' to decrypt file.\n3. Press '3' to Encrypt all files in the directory.\n4. Press '4' to decrypt all files in the directory.\n5. Press '5' to exit.\n"))
-        clear()
-        if choice == 1:
-            enc.encrypt_file(str(input("Enter name of file to encrypt: ")))
-        elif choice == 2:
-            enc.decrypt_file(str(input("Enter name of file to decrypt: ")))
-        elif choice == 3:
-            enc.encrypt_all_files()
-        elif choice == 4:
-            enc.decrypt_all_files()
-        elif choice == 5:
-            exit()
-        else:
-            print("Please select a valid option!")
+        s = str(input("\nEnter file or folder path : "))
 
-else:
-    while True:
+    do = str(input("\ne: encryption \nd: decryption \nEnter e/d: "))
+    while(do!="e" and do!="d"):
+        print("\nInvalid input")
         clear()
-        password = str(input("Setting up stuff. Enter a password that will be used for decryption: "))
-        repassword = str(input("Confirm password: "))
-        if password == repassword:
-            break
-        else:
-            print("Passwords Mismatched!")
-    f = open("data.txt", "w+")
-    f.write(password)
-    f.close()
-    enc.encrypt_file("data.txt")
-    print("Please restart the program to complete the setup")
-    time.sleep(15)
+        do = str(input("\ne: encryption \n d: decryption \nEnter e/d"))
+
+    #print("Wait while task gets completed")
+
+    if (os.path.isfile(s)==True and do=="e") :
+        enc.encrypt_file(s)
+    elif (os.path.isdir(s)==True and do=="e") :
+        enc.encrypt_all_files(s)
+    elif (os.path.isfile(s)==True and do=="d") :
+        enc.decrypt_file(s)
+    elif (os.path.isdir(s)==True and do=="d") :
+        enc.decrypt_all_files(s)
+    
+    #time.sleep(15)
+    
